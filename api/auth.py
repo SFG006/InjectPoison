@@ -1,7 +1,6 @@
 import os
 from fastapi import HTTPException , Security , status
 from fastapi.security import APIKeyHeader
-from fsspec.implementations.cache_metadata import Detail
 
 # Look for 'X-API-Key' in the HTTP request headers
 API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
@@ -29,4 +28,3 @@ async def verify_api_key(api_key: str = Security(API_KEY_HEADER)):
         )
     return api_key
 
-    

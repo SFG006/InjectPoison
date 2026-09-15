@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 from PIL import Image
 
 class PoisonEngine:
-    def __init__(self, eps = 8/255, alpha=2/255 , steps=15):
+    def __init__(self, eps = 4/255, alpha=1/255 , steps=15):
         """
         Initializes the PGD attack engine.
         eps: The "Epsilon" budget. Maximum allowed pixel change (keeps noise invisible).
@@ -20,7 +20,7 @@ class PoisonEngine:
         # 2. Load a 'Victim' Model
         # We use ResNet50 as our dummy target. If we poison against this,
         # the mathematical noise transfers incredibly well to other AI models.
-        self.model = models.resnet50(weights=models.ResNeXt50_32X4D_Weights).to(self.device)
+        self.model = models.resnet50(weights=models.ResNet50_Weights.DEFAULT).to(self.device)
         self.model.eval() # Freeze weights; we are altering the image, not training the model
 
         # 3. Configure the PGD Attack
@@ -30,7 +30,6 @@ class PoisonEngine:
         # 4. Standard Vision Transforms
         # Converts the image into a mathematical matrix (Tensor) scaled between 0 and 1
         self.transfrom = transforms.Compose([
-            transforms.Resize((512,512)), # Standardize size for processing
             transforms.ToTensor()
         ])
 
@@ -53,10 +52,13 @@ class PoisonEngine:
         # (Pushing the pixels as far away from the original_prediction as possible)
         poisoned_tensor = self.attack(image_tensor,original_prediction)
 
+        # Clamp ensures the mathematical noise doesn't create invalid/neon pixel colors
+        poisoned_tensor = torch.clamp(poisoned_tensor, 0, 1)
+
         # Convert the poisoned tensor back to a standard JPEG image
         poisoned_image = self.to_pil(poisoned_tensor.squeeze(0).cpu())
         output_buffer = io.BytesIO()
-        poisoned_image.save(output_buffer,format="JPEG", quality=95)
+        poisoned_image.save(output_buffer,format="JPEG", quality=100)
 
         return output_buffer.getvalue()
 
